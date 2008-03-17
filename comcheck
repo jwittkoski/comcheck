@@ -1,0 +1,210 @@
+#!/usr/bin/perl
+
+#
+# comcheck
+#
+# $Id: comcheck,v 1.1 2008/03/17 02:38:16 jpw Exp jpw $
+# 
+# Copyright (c) 2008 John P. Wittkoski. All rights reserved.
+# This program is free software; you can redistribute it and/or
+# modify it under the same terms as Perl itself.
+#
+# Watch video directories, and run commmercial detection on new videos
+#
+
+use strict;
+use Getopt::Std;
+use File::Basename;
+use IPC::Run;
+use Proc::Daemon;
+
+$| = 1;
+
+#
+# User configurable options
+#
+
+# Directories to check for video files
+my @scan_dirs = ( "/var/media/tv" );
+
+# Extensions that indicate video files
+# Comskip only supports MPEG-2 files
+my @video_extensions = ( "mpeg", "mpg" );
+
+# Where to log messages (if we are logging)
+my $log_dir = "/opt/sagetv/server";
+my $log_file = "comcheck.log";
+
+# Maxiumum number of commercial detection jobs to run at once
+my $max_runners = 5;
+
+# Time to sleep between checking for new videos
+my $sleep_time = 60;
+
+# Command to launch to do the commercial skipping
+my $commercial_detect_cmd = "/usr/bin/wine comskip.exe";
+
+# Delete orphaned .edl and .log files (i.e. edl and log file with no video file with the same name)
+# NOTE: Enable this at your own risk!
+my $delete_orphans = 0;
+my @delete_suffixes = ( "edl", "log" );
+
+#
+# User configurable options end here
+#
+
+# Command line flags:
+#   -d - don't go into background and show all debugging output
+#   -q - don't log anything
+#   -n - make no changes - don't actually run anything, delete anything, or log to the log file
+our ( $opt_d, $opt_q, $opt_n );
+getopts('dqn');
+
+# To keep track of the currently running child processes
+my $runners = {};
+
+# Shortcuts
+my %video_extensions = map { "." . $_ => 1 } @video_extensions;
+my %delete_suffixes = map { "." . $_ => 1 } @delete_suffixes;
+
+# Become a daemon if not in debug mode
+Proc::Daemon::Init() if ( ! $opt_d );
+
+$SIG{TERM} = \&process_term;
+
+logger("Starting\n");
+
+while (1) {
+    #
+    # Check for runners that have ended
+    #
+    foreach my $video_file ( keys %$runners ) {
+        my $h = $runners->{$video_file};
+        if ( $h->pumpable() ) {
+            logger("Still running: $video_file\n") if ( $opt_d );
+        } else {
+            $h->finish();
+            if ( my $result = $h->result() ) {
+                logger("Completed: $video_file\n");
+            } else {
+                logger("Failed: $video_file\n");
+            }
+            delete $runners->{$video_file};
+        }
+    }
+
+    foreach my $scan_dir ( @scan_dirs ) {
+        chdir $scan_dir || die "Couldn't chdir to $scan_dir";
+
+        opendir(IN, $scan_dir);
+        my @files = readdir(IN);
+        closedir(IN);
+
+        foreach my $file ( @files ) {
+            next if ( $file eq "." );
+            next if ( $file eq ".." );
+
+            my ( $filename, $directories, $filesuffix ) = fileparse($file, qr/\.[^.]*/);
+
+            #
+            # Check for orphaned files to delete
+            #
+            if ( $delete_suffixes{$filesuffix} ) {
+                if ( $delete_orphans ) {
+                    my $match = 0;
+                    foreach my $ext ( @video_extensions ) {
+                        if ( -f "$scan_dir/$filename.$ext" ) {
+                            $match++;
+                            last;
+                        } 
+                    }
+                    if ( ! $match ) {
+                        logger("Would remove orphan file $filename$filesuffix\n") if ( $opt_d );
+                        # TO DO: Actually remove the file
+                    } else {
+                        logger("Would NOT remove file $filename$filesuffix\n") if ( $opt_d );
+                    }
+                }
+                # Don't need to do any further processing on output files
+                next;
+            }
+
+            #
+            # Ignore files that don't look like video files
+            #
+            next unless ( $video_extensions{$filesuffix} );
+
+            #
+            # Skip if there is already a result file
+            #
+            if ( -f "$scan_dir/$filename.edl" ) {
+                logger("Already Done - $file\n") if ( $opt_d );
+                next;
+            }
+
+            #
+            # If the queue is full, no point in checking any more files...
+            #
+            if ( scalar keys %$runners >= $max_runners ) {
+               logger("Queue full\n") if ( $opt_d );
+               last;
+            }
+
+            #
+            # Skip files that are already being processed
+            #
+            if ( defined($runners->{"$scan_dir/$file"}) ) {
+                logger("Ignoring (already running): $file\n") if ( $opt_d );
+                next;
+            }
+
+            #
+            # Start commercial detection
+            #
+            if ( ! $opt_n ) {
+                logger("Starting: $scan_dir/$file\n");
+                my $h = IPC::Run::start "$commercial_detect_cmd '$file' > /dev/null 2>&1";
+                $runners->{"$scan_dir/$file"} = $h;
+            } else {
+                logger("Would have run: $commercial_detect_cmd '$file' > /dev/null 2>&1\n");
+            }
+        }
+    }
+
+    logger("Sleeping $sleep_time seconds...\n") if ( $opt_d );
+    sleep $sleep_time;
+}
+
+exit;
+
+#
+# Send the TERM signal to any running children
+# TO DO: This doesn't take care of the grandchildren!
+#
+sub process_term {
+    foreach my $video_file ( keys %$runners ) {
+        my $h = $runners->{$video_file};
+        $h->signal("TERM");
+    }
+    exit 0;
+}
+
+#
+# Simple logging
+#
+sub logger {
+    my ( $msg ) = @_;
+
+    return if ( $opt_q );
+
+    $msg = localtime(time) . " $msg";
+
+    if ( $opt_d | $opt_n ) {
+        print $msg;
+    } else {
+        open(OUT, ">>$log_dir/$log_file");
+        print OUT $msg;
+        close(OUT);
+    }
+};
+
