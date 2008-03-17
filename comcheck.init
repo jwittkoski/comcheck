@@ -1,0 +1,29 @@
+#! /bin/sh
+#
+#
+
+test -f /opt/sagetv/server/comcheck || exit 0
+
+case "$1" in
+  start)
+    echo -n "Starting comcheck daemon:"
+      echo -n " comcheck"
+      start-stop-daemon --start --chuid sagetv:sagetv --quiet --exec /usr/bin/perl --startas /opt/sagetv/server/comcheck
+    echo "."
+    ;;
+  stop)
+    echo -n "Stopping comcheck daemon:"
+    echo -n " comcheck"
+    start-stop-daemon --stop --quiet --exec /usr/bin/perl --name comcheck
+    echo "."
+    ;;
+  restart)
+    $0 stop
+    $0 start
+    ;;
+  *)
+    echo "Usage: /etc/init.d/comcheck {start|stop|restart}"
+    exit 1
+esac
+
+exit 0
