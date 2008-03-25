@@ -3,7 +3,7 @@
 #
 # comcheck
 #
-# $Id: comcheck,v 1.2 2008/03/17 02:55:49 jpw Exp jpw $
+# $Id: comcheck,v 1.3 2008/03/25 01:49:23 jpw Exp jpw $
 #
 # Watch video directories and run commmercial detection on new videos.
 #
@@ -110,6 +110,7 @@ while (1) {
         foreach my $file ( @files ) {
             next if ( $file eq "." );
             next if ( $file eq ".." );
+            next unless ( -s $file );
 
             my ( $filename, $directories, $filesuffix ) = fileparse($file, qr/\.[^.]*/);
 
