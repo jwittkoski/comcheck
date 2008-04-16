@@ -3,7 +3,7 @@
 #
 # comcheck
 #
-# $Id: comcheck,v 1.3 2008/03/25 01:49:23 jpw Exp jpw $
+# $Id: comcheck,v 1.4 2008/04/16 03:23:23 jpw Exp jpw $
 #
 # Watch video directories and run commmercial detection on new videos.
 #
@@ -49,7 +49,7 @@ my $max_runners = 5;
 my $sleep_time = 60;
 
 # Command to launch to do the commercial skipping
-my $commercial_detect_cmd = "/usr/bin/wine comskip.exe";
+my $commercial_detect_cmd = "/usr/bin/wine /opt/sagetv/comskip/comskip.exe --ini=/opt/sagetv/comskip/comskip.ini";
 
 # Delete orphaned .edl and .log files (i.e. edl and log file with no video file with the same name)
 # NOTE: Enable this at your own risk!
@@ -127,8 +127,12 @@ while (1) {
                         } 
                     }
                     if ( ! $match ) {
-                        logger("Would remove orphan file $filename$filesuffix\n") if ( $opt_d );
-                        # TO DO: Actually remove the file
+                        if ( ! $opt_n ) {
+                            unlink "$scan_dir/$filename$filesuffix";
+                            logger("Removed orphan file $filename$filesuffix\n");
+                        } else {
+                            logger("Would remove orphan file $filename$filesuffix\n") if ( $opt_d );
+                        }
                     } else {
                         logger("Would NOT remove file $filename$filesuffix\n") if ( $opt_d );
                     }
