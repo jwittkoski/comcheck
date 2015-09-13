@@ -51,10 +51,9 @@ my $sleep_time = 60;
 # Command to launch to do the commercial skipping
 my $commercial_detect_cmd = "/usr/bin/wine /opt/sagetv/comskip/comskip.exe --ini=/opt/sagetv/comskip/comskip.ini";
 
-# Delete orphaned .edl and .log files (i.e. edl and log file with no video file with the same name)
-# NOTE: Enable this at your own risk!
-my $delete_orphans = 0;
-my @delete_suffixes = ( "edl", "log" );
+# Delete orphaned .edl, .txt, and .log files (i.e. files with no video file with the same name)
+my $delete_orphans = 1;
+my @delete_suffixes = ( "edl", "log", "txt" );
 
 #
 # User configurable options end here
