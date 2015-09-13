@@ -45,7 +45,7 @@ my $log_file = "comcheck.log";
 # Maxiumum number of commercial detection jobs to run at once
 my $max_runners = 5;
 
-# Time to sleep between checking for new videos
+# Seconds to sleep between checking for new videos
 my $sleep_time = 60;
 
 # Command to launch to do the commercial skipping
