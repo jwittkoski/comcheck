@@ -3,11 +3,9 @@
 #
 # comcheck
 #
-# $Id: comcheck,v 1.4 2008/04/16 03:23:23 jpw Exp jpw $
-#
 # Watch video directories and run commmercial detection on new videos.
 #
-# Copyright (c) 2008 John P. Wittkoski. All Rights Reserved.
+# Copyright (c) 2008-2016 John P. Wittkoski. All Rights Reserved.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of either:
