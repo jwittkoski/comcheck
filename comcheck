@@ -46,6 +46,12 @@ my $max_runners = 5;
 # Seconds to sleep between checking for new videos
 my $sleep_time = 60;
 
+# Whether to run comskip while recordings are active
+my $run_while_recording = 1;
+
+# Seconds delay before starting (after all recordings are finished)
+my $idle_delay = 5;
+
 # Command to launch to do the commercial skipping
 my $commercial_detect_cmd = "/usr/bin/wine /opt/sagetv/comskip/comskip.exe --ini=/opt/sagetv/comskip/comskip.ini";
 
@@ -97,6 +103,10 @@ while (1) {
         }
     }
 
+    #
+    # TO DO: Currently $run_while_recording really only applies on a per @scan_dirs basis.
+    #        Fix that so all files in all directories are scanned once, then processed as a group.
+    #
     foreach my $scan_dir ( @scan_dirs ) {
         chdir $scan_dir || die "Couldn't chdir to $scan_dir";
 
@@ -136,6 +146,37 @@ while (1) {
                         logger("Would NOT remove file $filename$filesuffix\n") if ( $opt_d );
                     }
                 }
+            }
+        }
+
+        #
+        # If needed, check whether any recordings are running
+        #
+        if ( ! $run_while_recording ) {
+            my $latest_mtime = 0;
+
+            foreach my $file ( @files ) {
+                next if ( $file eq "." );
+                next if ( $file eq ".." );
+                next unless ( -s $file );
+
+                my ( $filename, $directories, $filesuffix ) = fileparse($file, qr/\.[^.]*/);
+
+                #
+                # Ignore files that don't look like video files
+                #
+                next unless ( $video_extensions{$filesuffix} );
+
+                my $mtime = (stat($file))[9];
+                if ( $mtime > $latest_mtime ) {
+                    $latest_mtime = $mtime;
+                }
+            }
+
+            my $soonest = time - ( $idle_delay * 60 );
+            if ( $latest_mtime > $soonest ) {
+                logger("Waiting for recordings to finish\n") if ( $opt_d );
+                next;
             }
         }
 
