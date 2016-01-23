@@ -57,7 +57,7 @@ my $commercial_detect_cmd = "/usr/bin/wine /opt/sagetv/comskip/comskip.exe --ini
 
 # Delete orphaned .edl, .txt, and .log files (i.e. files with no video file with the same name)
 my $delete_orphans = 1;
-my @delete_suffixes = ( "edl", "log", "txt" );
+my @delete_suffixes = ( "edl", "log", "txt", "logo.txt" );
 
 #
 # User configurable options end here
@@ -125,7 +125,7 @@ while (1) {
                 next if ( $file eq "." );
                 next if ( $file eq ".." );
 
-                my ( $filename, $directories, $filesuffix ) = fileparse($file, qr/\.[^.]*/);
+                my ( $filename, $directories, $filesuffix ) = fileparse($file, keys %delete_suffixes);
 
                 if ( $delete_suffixes{$filesuffix} ) {
                     my $match = 0;
