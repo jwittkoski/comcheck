@@ -100,28 +100,30 @@ while (1) {
     foreach my $scan_dir ( @scan_dirs ) {
         chdir $scan_dir || die "Couldn't chdir to $scan_dir";
 
+        #
+        # Collect all the files to process (in this directory)
+        #
         opendir(IN, $scan_dir);
         my @files = readdir(IN);
         closedir(IN);
 
-        foreach my $file ( @files ) {
-            next if ( $file eq "." );
-            next if ( $file eq ".." );
-            next unless ( -s $file );
+        #
+        # Check for orphaned files to delete
+        #
+        if ( $delete_orphans ) {
+            foreach my $file ( @files ) {
+                next if ( $file eq "." );
+                next if ( $file eq ".." );
 
-            my ( $filename, $directories, $filesuffix ) = fileparse($file, qr/\.[^.]*/);
+                my ( $filename, $directories, $filesuffix ) = fileparse($file, qr/\.[^.]*/);
 
-            #
-            # Check for orphaned files to delete
-            #
-            if ( $delete_suffixes{$filesuffix} ) {
-                if ( $delete_orphans ) {
+                if ( $delete_suffixes{$filesuffix} ) {
                     my $match = 0;
                     foreach my $ext ( @video_extensions ) {
                         if ( -f "$scan_dir/$filename.$ext" ) {
                             $match++;
                             last;
-                        } 
+                        }
                     }
                     if ( ! $match ) {
                         if ( ! $opt_n ) {
@@ -134,9 +136,18 @@ while (1) {
                         logger("Would NOT remove file $filename$filesuffix\n") if ( $opt_d );
                     }
                 }
-                # Don't need to do any further processing on output files
-                next;
             }
+        }
+
+        #
+        # Find shows that need commercial detection
+        #
+        foreach my $file ( @files ) {
+            next if ( $file eq "." );
+            next if ( $file eq ".." );
+            next unless ( -s $file );
+
+            my ( $filename, $directories, $filesuffix ) = fileparse($file, qr/\.[^.]*/);
 
             #
             # Ignore files that don't look like video files
