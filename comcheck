@@ -33,8 +33,7 @@ $| = 1;
 my @scan_dirs = ( "/var/media/tv" );
 
 # Extensions that indicate video files
-# Comskip only supports MPEG-2 files
-my @video_extensions = ( "mpeg", "mpg" );
+my @video_extensions = ( "mpeg", "mpg", "ts" );
 
 # Where to log messages (if we are logging)
 my $log_dir = "/opt/sagetv/server";
@@ -53,7 +52,7 @@ my $run_while_recording = 1;
 my $idle_delay = 5;
 
 # Command to launch to do the commercial skipping
-my $commercial_detect_cmd = "/usr/bin/wine /opt/sagetv/comskip/comskip.exe --ini=/opt/sagetv/comskip/comskip.ini";
+my $commercial_detect_cmd = "/opt/sagetv/comskip/comskip --ini=/opt/sagetv/comskip/comskip.ini";
 
 # Delete orphaned .edl, .txt, and .log files (i.e. files with no video file with the same name)
 my $delete_orphans = 1;
