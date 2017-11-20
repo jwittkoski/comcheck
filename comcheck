@@ -54,9 +54,9 @@ my $idle_delay = 5;
 # Command to launch to do the commercial skipping
 my $commercial_detect_cmd = "/opt/sagetv/comskip/comskip --ini=/opt/sagetv/comskip/comskip.ini";
 
-# Delete orphaned .edl, .txt, and .log files (i.e. files with no video file with the same name)
+# Delete orphaned files (i.e. files with no video file with the same name)
 my $delete_orphans = 1;
-my @delete_suffixes = ( "edl", "log", "txt", "logo.txt" );
+my @delete_suffixes = ( 'edl', 'log', 'txt', 'logo.txt' );
 
 #
 # User configurable options end here
@@ -74,7 +74,11 @@ my $runners = {};
 
 # Shortcuts
 my %video_extensions = map { "." . $_ => 1 } @video_extensions;
-my %delete_suffixes = map { "." . $_ => 1 } @delete_suffixes;
+
+# Sort delete suffixes by number of segments (segments are separated by '.' characters)
+# Suffixes with longer segments need to be earlier in the list so the later matching
+# occurs in the correct order.
+@delete_suffixes = sort { $b =~ tr/\.// <=> $a =~ tr/\.// } @delete_suffixes;
 
 # Become a daemon if not in debug mode
 Proc::Daemon::Init() if ( ! $opt_d );
@@ -124,26 +128,36 @@ while (1) {
                 next if ( $file eq "." );
                 next if ( $file eq ".." );
 
-                my ( $filename, $directories, $filesuffix ) = fileparse($file, keys %delete_suffixes);
+                # Is file's extension one that should be deleted if orphaned?
+                my $ext_match = '';
+                foreach my $ext ( @delete_suffixes ) {
+                    if ( $file =~ /\.$ext$/ ) {
+                        $ext_match = $ext;
+                        last;
+                    }
+                }
+                next unless ( $ext_match );
 
-                if ( $delete_suffixes{$filesuffix} ) {
-                    my $match = 0;
-                    foreach my $ext ( @video_extensions ) {
-                        if ( -f "$scan_dir/$filename.$ext" ) {
-                            $match++;
-                            last;
-                        }
+                # Check for matching video file
+                my $match = 0;
+                my ($filename, $filesuffix) = $file =~ /(.+)\.($ext_match)$/;
+                foreach my $ext ( @video_extensions ) {
+                    if ( -f "$scan_dir/$filename.$ext" ) {
+                        $match++;
+                        last;
                     }
-                    if ( ! $match ) {
-                        if ( ! $opt_n ) {
-                            unlink "$scan_dir/$filename$filesuffix";
-                            logger("Removed orphan file $filename$filesuffix\n");
-                        } else {
-                            logger("Would remove orphan file $filename$filesuffix\n") if ( $opt_d );
-                        }
+                }
+
+                # No matching video file, this file is an orphan
+                if ( ! $match ) {
+                    if ( ! $opt_n ) {
+                        unlink "$scan_dir/$filename.$filesuffix";
+                        logger("Removed orphan file $filename.$filesuffix\n");
                     } else {
-                        logger("Would NOT remove file $filename$filesuffix\n") if ( $opt_d );
+                        logger("Would remove orphan file $filename.$filesuffix\n") if ( $opt_d );
                     }
+                } else {
+                    logger("Would NOT remove file $filename.$filesuffix\n") if ( $opt_d );
                 }
             }
         }
