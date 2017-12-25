@@ -48,7 +48,7 @@ my $sleep_time = 60;
 # Whether to run comskip while recordings are active
 my $run_while_recording = 1;
 
-# Seconds delay before starting (after all recordings are finished)
+# Minutes delay before starting (after all recordings are finished)
 my $idle_delay = 5;
 
 # Command to launch to do the commercial skipping
