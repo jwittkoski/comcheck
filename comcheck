@@ -46,7 +46,7 @@ my $max_runners = 5;
 my $sleep_time = 60;
 
 # Whether to run comskip while recordings are active
-my $run_while_recording = 1;
+my $run_while_recording = 0;
 
 # Minutes delay before starting (after all recordings are finished)
 my $idle_delay = 5;
