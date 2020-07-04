@@ -56,7 +56,7 @@ my $commercial_detect_cmd = "/opt/sagetv/comskip/comskip --ini=/opt/sagetv/comsk
 
 # Delete orphaned files (i.e. files with no video file with the same name)
 my $delete_orphans = 1;
-my @delete_suffixes = ( 'edl', 'log', 'txt', 'logo.txt' );
+my @delete_suffixes = ( 'edl', 'log', 'txt', 'logo.txt', 'srt' );
 
 #
 # User configurable options end here
